@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
       - uses: DeterminateSystems/nix-installer-action@v22
       - run: ./.github/update.sh
         env:
@@ -20,9 +22,12 @@ jobs:
       - name: Test build
         run: nix build .#default --print-build-logs
       - id: version
-        run: echo "version=$(jq -r '."x86_64-linux".version' sources.json)" >> "$GITHUB_OUTPUT"
+        run: |
+          version=$(jq -r '."x86_64-linux".version' sources.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          [ -n "$(git tag -l "v$version")" ] || echo "tag=v$version" >> "$GITHUB_OUTPUT"
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: update sources to ${{ steps.version.outputs.version }}"
           file_pattern: sources.json
-          tagging_message: v${{ steps.version.outputs.version }}
+          tagging_message: ${{ steps.version.outputs.tag }}
