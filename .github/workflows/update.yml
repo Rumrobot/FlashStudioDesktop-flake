@@ -1,0 +1,28 @@
+name: Update sources
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - run: ./.github/update.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test build
+        run: nix build .#default --print-build-logs
+      - id: version
+        run: echo "version=$(jq -r '."x86_64-linux".version' sources.json)" >> "$GITHUB_OUTPUT"
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update sources to ${{ steps.version.outputs.version }}"
+          file_pattern: sources.json
+          tagging_message: v${{ steps.version.outputs.version }}

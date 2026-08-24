@@ -1,0 +1,23 @@
+version: "3"
+
+tasks:
+  format:
+    desc: Format code
+    cmds:
+      - nix fmt .
+
+  fix:
+    desc: Fix lint issues
+    cmds:
+      - statix fix .
+      - deadnix --edit .
+
+  check:
+    desc: Run all flake checks (formatting, linting, eval)
+    cmds:
+      - nix flake check
+
+  build:
+    desc: Build the package
+    cmds:
+      - nix build .#default
