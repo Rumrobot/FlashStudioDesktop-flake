@@ -1,1 +1,7 @@
-{}
+{
+  "x86_64-linux": {
+    "version": "1.7.9",
+    "url": "https://github.com/FlashForge/Orca-Flashforge/releases/download/1.7.9/Flash.Studio_ubuntu24.04_V1.7.9.AppImage",
+    "sha256": "sha256-lleGVkZkFq3BzNLn7GVqCyF1YO2t7rKWQiWeZ5Iq30U="
+  }
+}
