@@ -3,23 +3,32 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-api=https://api.github.com/repos/FlashForge/Orca-Flashforge/releases/latest
+api=https://api.github.com/repos/FlashForge/Orca-Flashforge/releases
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
-release=$tmp/release.json
+releases=$tmp/releases.json
 entries=$tmp/entries.jsonl
 out=$tmp/sources.json
 
 if [ -n "${GITHUB_TOKEN:-}" ]; then
-  curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$api" > "$release"
+  curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$api" > "$releases"
 else
-  curl -fsSL "$api" > "$release"
+  curl -fsSL "$api" > "$releases"
 fi
-version=$(jq -r '.tag_name | ltrimstr("v")' "$release")
+
+# Find the first release with an AppImage
+release=$(jq -c 'map(select(any(.assets[]; .name | endswith(".AppImage")))) | .[0]' "$releases")
+
+if [ "$release" = "null" ]; then
+  echo "No recent release with an AppImage found."
+  exit 0
+fi
+
+version=$(printf '%s\n' "$release" | jq -r '.tag_name | ltrimstr("v")')
 : > "$entries"
 
-jq -c '.assets[] | {name, url: .browser_download_url}' "$release" |
+printf '%s\n' "$release" | jq -c '.assets[] | {name, url: .browser_download_url}' |
 while IFS= read -r asset; do
   name=$(printf '%s\n' "$asset" | jq -r .name)
   url=$(printf '%s\n' "$asset" | jq -r .url)
@@ -41,7 +50,11 @@ while IFS= read -r asset; do
 done
 
 jq -s 'add' "$entries" > "$out"
-jq -e 'length > 0' "$out" > /dev/null
 
-mv "$out" sources.json
-cat sources.json
+if jq -e 'length > 0' "$out" > /dev/null; then
+    mv "$out" sources.json
+    cat sources.json
+else
+    echo "Error while processing entries."
+    exit 1
+fi
